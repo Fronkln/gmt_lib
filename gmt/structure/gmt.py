@@ -111,15 +111,14 @@ class GMTBone:
 
 
 class GMTCurve:
-    format: GMTCurveFormat
     channel: GMTCurveChannel
     type: GMTCurveType
     keyframes: List['GMTKeyframe']
 
-    def __init__(self, format, channel, type):
-        self.format = format
-        self.channel = channel
+    def __init__(self, type, channel):
         self.type = type
+        self.channel = channel
+
 
     def get_end_frame(self):
         return self.keyframes[-1].frame if len(self.keyframes) else 0

@@ -1,10 +1,12 @@
 from enum import IntFlag
 
+
 class GMTVersion(IntFlag):
     KENZAN = 0x10001
     YAKUZA3 = 0x20000
     YAKUZA5 = 0x20001
     ISHIN = 0x20002
+
 
 # Using IntFlag to support undocumented formats (patterns etc)
 class GMTCurveType(IntFlag):

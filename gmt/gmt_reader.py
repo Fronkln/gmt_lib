@@ -37,7 +37,7 @@ def read_gmt(file: Union[str, bytearray]) -> GMT:
 
             for br_curve in br_gmt.curves[br_group.index: br_group.index + br_group.count]:
                 br_curve: BrGMTCurve
-                curve = GMTCurve(br_curve.format, br_curve.channel, br_curve.type)
+                curve = GMTCurve(br_curve.type, br_curve.channel)
                 curve.keyframes = list(map(lambda k, v: GMTKeyframe(k, v), br_curve.graph.values, br_curve.values))
 
                 curves.append(curve)
