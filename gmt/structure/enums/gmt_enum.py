@@ -13,17 +13,25 @@ class GMTCurveType(IntFlag):
     ROTATION = 0
     LOCATION = 1
     PATTERN_HAND = 4
-    PATTERN_FACE = 5
+    PATTERN_UNK = 5
+    PATTERN_FACE = 6
 
 
 class GMTCurveChannel(IntFlag):
-    ALL = LEFT_HAND = 0
-    X = RIGHT_HAND = 1
-    Y = 2
-    Z = 3
+    """X, Y, Z, and ALL are for LOCATION
 
-    # Only used for position, instead of 3 for some reason
-    Z_POS = 4
+    XW, YW, ZW, and ALL are for ROTATION
+
+    LEFT_HAND, RIGHT_HAND and UNK_HAND are for PATTERN_HAND
+
+    PATTERN_FACE has unknown values ranging from 0 to more than 5
+    """
+
+    ALL = LEFT_HAND = 0
+    X = XW = RIGHT_HAND = 1
+    Y = YW = UNK_HAND = 2
+    ZW = 3
+    Z = 4
 
 
 class GMTCurveFormat(IntFlag):

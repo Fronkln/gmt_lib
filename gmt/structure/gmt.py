@@ -75,7 +75,7 @@ class GMTBone:
         return self.__curve_dict.get(GMTCurveType.LOCATION)
 
     @location.setter
-    def location(self, val):
+    def location(self, val: 'GMTCurve'):
         self.__curve_dict[GMTCurveType.LOCATION] = val
 
     # Rotation curve
@@ -84,7 +84,7 @@ class GMTBone:
         return self.__curve_dict.get(GMTCurveType.ROTATION)
 
     @rotation.setter
-    def rotation(self, val):
+    def rotation(self, val: 'GMTCurve'):
         self.__curve_dict[GMTCurveType.ROTATION] = val
 
     # Hand patterns
@@ -93,7 +93,7 @@ class GMTBone:
         return self.__curve_dict.get(GMTCurveType.PATTERN_HAND)
 
     @patterns_hand.setter
-    def patterns_hand(self, val):
+    def patterns_hand(self, val: List['GMTCurve']):
         self.__curve_dict[GMTCurveType.PATTERN_HAND] = val
 
     # Face patterns
@@ -102,7 +102,7 @@ class GMTBone:
         return self.__curve_dict.get(GMTCurveType.PATTERN_FACE)
 
     @patterns_face.setter
-    def patterns_face(self, val):
+    def patterns_face(self, val: List['GMTCurve']):
         self.__curve_dict[GMTCurveType.PATTERN_FACE] = val
 
     # @property
