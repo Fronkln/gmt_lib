@@ -22,6 +22,16 @@ class GMT:
     def animation(self, val):
         self.animation_list[0] = val
 
+    @property
+    def vector_version(self) -> GMTVectorVersion:
+        vector_version = GMTVectorVersion.from_GMTVersion(self.version)
+
+        # Detect old version by the scale bone
+        if vector_version != GMTVectorVersion.NO_VECTOR and len(self.animation_list) != 0:
+            vector_version = GMTVectorVersion.OLD_VECTOR if self.animation_list[0].bones.get('scale') else GMTVectorVersion.DRAGON_VECTOR
+
+        return vector_version
+
     def __str__(self) -> str:
         return f'name: "{self.name}", version: {GMTVersion(self.version).name}, animation: {{{self.animation}}}'
 
@@ -32,15 +42,15 @@ class GMT:
 class GMTAnimation:
     name: str
     framerate: float
-    bones: List['GMTBone']
+    bones: Dict[str, 'GMTBone']
 
     def __init__(self, name, framerate):
         self.name = name
         self.framerate = framerate
-        self.bones = list()
+        self.bones = dict()
 
     def get_end_frame(self):
-        return max(0, *map(lambda c: c.get_end_frame(), chain(*map(lambda x: x.get_curves(), self.bones))))
+        return max(0, *map(lambda c: c.get_end_frame(), chain(*map(lambda x: x.curves(), self.bones.values()))))
 
     def __str__(self) -> str:
         return f'name: {self.name}, len(bones): {len(self.bones)}'

@@ -29,7 +29,7 @@ def read_gmt(file: Union[str, bytearray]) -> GMT:
         br_anm: BrGMTAnimation
 
         anm = GMTAnimation(br_gmt.strings[br_anm.name_index].data, br_anm.framerate)
-        anm_bone_names = bone_names[br_anm.bone_group_index]
+        anm_bone_names = bone_names[br_anm.bone_group_index]  # Get bone names for this animation
 
         for i, br_group in enumerate(br_gmt.curve_groups[br_anm.curve_groups_index: br_anm.curve_groups_index + br_anm.curve_groups_count]):
             bone = GMTBone(anm_bone_names[i].data)
@@ -43,7 +43,7 @@ def read_gmt(file: Union[str, bytearray]) -> GMT:
                 curves.append(curve)
 
             bone.curves = curves
-            anm.bones.append(bone)
+            anm.bones[bone.name] = bone
 
         gmt.animation_list.append(anm)
 

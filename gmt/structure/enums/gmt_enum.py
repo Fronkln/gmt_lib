@@ -1,4 +1,4 @@
-from enum import IntFlag
+from enum import IntFlag, auto
 
 
 class GMTVersion(IntFlag):
@@ -6,6 +6,20 @@ class GMTVersion(IntFlag):
     YAKUZA3 = 0x20000
     YAKUZA5 = 0x20001
     ISHIN = 0x20002
+
+
+class GMTVectorVersion:
+    NO_VECTOR = auto()
+    OLD_VECTOR = auto()
+    DRAGON_VECTOR = auto()
+
+    @classmethod
+    def from_GMTVersion(cls, version: GMTVersion):
+        if version == GMTVersion.ISHIN:
+            # This can be OLD_VECTOR as well, but that can't be determined with the version alone
+            return GMTVectorVersion.DRAGON_VECTOR
+
+        return GMTVectorVersion.NO_VECTOR
 
 
 # Using IntFlag to support undocumented formats (patterns etc)
