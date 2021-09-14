@@ -68,7 +68,6 @@ class GMTBone:
         self.name = name
 
     # Curves
-
     @property
     def curves(self) -> List['GMTCurve']:
         """Returns a copied list containing the curves for this bone. Modifying this does not modify the internal curves dict."""
@@ -121,8 +120,8 @@ class GMTBone:
 
 
 class GMTCurve:
-    channel: GMTCurveChannel
     type: GMTCurveType
+    channel: GMTCurveChannel
     keyframes: List['GMTKeyframe']
 
     def __init__(self, type, channel):
@@ -132,6 +131,34 @@ class GMTCurve:
 
     def get_end_frame(self):
         return self.keyframes[-1].frame if len(self.keyframes) else 0
+
+
+    def fill_channels(self):
+        if self.channel != GMTCurveChannel.ALL:
+            if self.type == GMTCurveType.LOCATION:
+                if self.channel == GMTCurveChannel.X:
+                    for kf in self.keyframes:
+                        kf.value = (kf.value[0], 0.0, 0.0)
+                elif self.channel == GMTCurveChannel.Y:
+                    for kf in self.keyframes:
+                        kf.value = (0.0, kf.value[0], 0.0)
+                elif self.channel == GMTCurveChannel.Z:
+                    for kf in self.keyframes:
+                        kf.value = (0.0, 0.0, kf.value[0])
+
+                self.channel = GMTCurveChannel.ALL
+            elif self.type == GMTCurveType.ROTATION:
+                if self.channel == GMTCurveChannel.XW:
+                    for kf in self.keyframes:
+                        kf.value = (kf.value[0], 0.0, 0.0, kf.value[1])
+                elif self.channel == GMTCurveChannel.YW:
+                    for kf in self.keyframes:
+                        kf.value = (0.0, kf.value[0], 0.0, kf.value[1])
+                elif self.channel == GMTCurveChannel.ZW:
+                    for kf in self.keyframes:
+                        kf.value = (0.0, 0.0, kf.value[0], kf.value[1])
+
+                self.channel = GMTCurveChannel.ALL
 
 
 class GMTKeyframe:
