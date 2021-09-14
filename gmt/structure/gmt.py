@@ -41,16 +41,18 @@ class GMT:
 
 class GMTAnimation:
     name: str
-    framerate: float
+    frame_rate: float
+    end_frame: int
     bones: Dict[str, 'GMTBone']
 
-    def __init__(self, name, framerate):
+    def __init__(self, name, frame_rate, end_frame):
         self.name = name
-        self.framerate = framerate
+        self.frame_rate = frame_rate
+        self.end_frame = end_frame
         self.bones = dict()
 
     def get_end_frame(self):
-        return max(0, *map(lambda c: c.get_end_frame(), chain(*map(lambda x: x.curves(), self.bones.values()))))
+        return max(0, *map(lambda c: c.get_end_frame(), chain(*map(lambda x: x.curves, self.bones.values()))))
 
     def __str__(self) -> str:
         return f'name: {self.name}, len(bones): {len(self.bones)}'

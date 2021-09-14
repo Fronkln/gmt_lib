@@ -89,7 +89,7 @@ class BrGMTAnimation(BrStruct):
         self.start_frame = br.read_uint32()
         self.end_frame = br.read_uint32()
         self.index = br.read_uint32()
-        self.framerate = br.read_float()
+        self.frame_rate = br.read_float()
         self.name_index = br.read_uint32()
         self.bone_group_index = br.read_uint32()
         self.curve_groups_index = br.read_uint32()
