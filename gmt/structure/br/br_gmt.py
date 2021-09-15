@@ -219,8 +219,12 @@ class BrGMTCurve(BrStruct):
         self.graph_index = br.read_uint32()
         self.animation_data_offset = br.read_uint32()
         self.format = GMTCurveFormat(br.read_uint32())
-        self.channel = GMTCurveChannel(br.read_uint16())
-        self.type = GMTCurveType(br.read_uint16())
+
+        # This value has to be read as a single uint32
+        channel_type = br.read_uint32()
+
+        self.channel = GMTCurveChannel(channel_type >> 16)
+        self.type = GMTCurveType(channel_type & 0xFFFF)
 
         self.graph = graphs[self.graph_index]
         count = self.graph.count

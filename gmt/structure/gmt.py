@@ -147,6 +147,8 @@ class GMTCurve:
                 elif self.channel == GMTCurveChannel.Z:
                     for kf in self.keyframes:
                         kf.value = (0.0, 0.0, kf.value[0])
+                else:
+                    raise Exception(f'Incompatible channel value: {self.channel}')
 
                 self.channel = GMTCurveChannel.ALL
             elif self.type == GMTCurveType.ROTATION:
@@ -159,6 +161,8 @@ class GMTCurve:
                 elif self.channel == GMTCurveChannel.ZW:
                     for kf in self.keyframes:
                         kf.value = (0.0, 0.0, kf.value[0], kf.value[1])
+                else:
+                    raise Exception(f'Incompatible channel value: {self.channel}')
 
                 self.channel = GMTCurveChannel.ALL
 
