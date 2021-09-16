@@ -126,9 +126,10 @@ class GMTCurve:
     channel: GMTCurveChannel
     keyframes: List['GMTKeyframe']
 
-    def __init__(self, type, channel):
+    def __init__(self, type, channel=GMTCurveChannel.ALL):
         self.type = type
         self.channel = channel
+        self.keyframes = list()
 
 
     def get_end_frame(self):
