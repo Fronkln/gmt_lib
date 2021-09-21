@@ -10,13 +10,14 @@ def read_gmt(file: Union[str, bytearray]) -> GMT:
     :param file: Path to file as a string, or bytes-like object containing the file
     :return: The GMT object
     """
+
     if isinstance(file, str):
         with open(file, 'rb') as f:
             file_bytes = f.read()
     else:
         file_bytes = file
 
-    with BinaryReader(file_bytes, Endian.BIG) as br:
+    with BinaryReader(file_bytes) as br:
         br_gmt: BrGMT = br.read_struct(BrGMT)
 
     gmt = GMT(br_gmt.header.file_name.data, br_gmt.header.version)

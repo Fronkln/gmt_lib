@@ -1,9 +1,7 @@
-import struct
-from contextlib import AsyncExitStack
-from math import sqrt
-
 from ...util import *
 from ..enums.gmt_enum import *
+from ..gmt import GMT, GMTCurve
+from .br_gmt_anm_data import *
 from .br_rgg import BrRGGString
 
 
@@ -33,9 +31,204 @@ class BrGMT(BrStruct):
         br.seek(header.curves_offset)
         self.curves = br.read_struct(BrGMTCurve, header.curves_count, self.graphs, header.version)
 
-        # This will be done in the reader file
-        # br.seek(header.animation_data_offset)
-        # self.animation_data = br.buffer()[br.pos(): br.pos() + header.animation_data_size]
+    def __br_write__(self, br: BinaryReader, gmt: GMT):
+        br.set_endian(Endian.BIG)
+
+        graphs, bone_groups, curve_groups = list(), list(), list()
+        curve_groups_index = 0
+        bone_strings = list()
+
+        # The file is being written backwards
+        # First thing after the header is the animation data, then the curves
+        # Then comes the curve groups, the bone groups, and the strings
+        # And then the graphs, the graph offsets, and finally, the animation structs
+
+        # Header size
+        anm_data_start = 0x80
+
+        # Curves and animation data
+        curve_br, anm_data_br = BinaryReader(endianness=Endian.BIG), BinaryReader(endianness=Endian.BIG)
+        anm_data_size_offset, graphs_index_count = list(), list()
+        curves_index = 0
+        for anm in gmt.animation_list:
+            # Add the bone group (index, count)
+            bone_groups.append(BrGMTGroup(len(bone_strings) + len(gmt.animation_list), len(anm.bones)))
+
+            # Add the bone names
+            bone_strings.extend(list(anm.bones.keys()))
+
+            anm_data_offset = anm_data_br.pos()
+            graphs_index = len(graphs)
+
+            # This allows us to reuse graphs when possible
+            graphs_dict: IterativeDict = IterativeDict()
+
+            for bone in anm.bones.values():
+                # Add the curve group (index, count)
+                curve_groups.append(BrGMTGroup(curves_index, len(bone.curves)))
+                curves_index += len(bone.curves)
+                for curve in bone.curves:
+                    curve_br.write_struct(BrGMTCurve(), curve, graphs_dict, anm_data_br, anm_data_start, gmt.version)
+
+            # Since graphs are unique per animation, we reset the dictionary and add its items to the graphs list
+            graphs.extend(graphs_dict)
+
+            anm_data_size_offset.append((anm_data_br.pos() - anm_data_offset, anm_data_start + anm_data_offset))
+            graphs_index_count.append((graphs_index, len(graphs) - graphs_index))
+
+        # Align animation data buffer
+        anm_data_br.align(0x20)
+
+        # Curve groups
+        curve_groups_br = BinaryReader(endianness=Endian.BIG)
+        for g in curve_groups:
+            curve_groups_br.write_struct(g)
+
+        curve_groups_br.align(0x20)
+
+        # Bone groups
+        bone_groups_br = BinaryReader(endianness=Endian.BIG)
+        for g in bone_groups:
+            bone_groups_br.write_struct(g)
+
+        bone_groups_br.align(0x20)
+
+        # Add all anm and bone names to the strings list
+        strings = list(map(lambda x: BrRGGString(x.name), gmt.animation_list))
+        strings.extend(map(BrRGGString, bone_strings))
+
+        # Strings
+        strings_br = BinaryReader(endianness=Endian.BIG)
+        for s in strings:
+            strings_br.write_struct(s)
+
+        graph_data_start = anm_data_start + anm_data_br.size() + curve_br.size() + curve_groups_br.size() + \
+            bone_groups_br.size() + strings_br.size()
+
+        # Graph data
+        graphs_offsets_br, graphs_data_br = BinaryReader(endianness=Endian.BIG), BinaryReader(endianness=Endian.BIG)
+        graph_data_size_offset = list()
+
+        for index, count in graphs_index_count:
+            graph_data_offset = graphs_data_br.pos()
+            for i in range(index, index + count):
+                graphs_offsets_br.write_uint32(graph_data_start + graphs_data_br.size())
+                graphs_data_br.write_struct(graphs[i])
+
+            graph_data_size_offset.append((graphs_data_br.pos() - graph_data_offset,
+                                           graph_data_start + graph_data_offset))
+
+        graphs_offsets_br.align(0x20)
+        graphs_data_br.align(0x20)
+
+        # Animations
+        anm_br = BinaryReader(endianness=Endian.BIG)
+        for i, anm in enumerate(gmt.animation_list):
+            # start_frame
+            anm_br.write_uint32(anm.get_start_frame())
+
+            # end_frame
+            anm_br.write_uint32(anm.end_frame)
+
+            # index
+            anm_br.write_uint32(i)
+
+            # frame_rate
+            anm_br.write_float(anm.frame_rate)
+
+            # name_index
+            anm_br.write_uint32(i)
+
+            # bone_group_index
+            anm_br.write_uint32(i)
+
+            # curve_groups_index
+            anm_br.write_uint32(curve_groups_index)
+            curve_groups_index += len(anm.bones)
+
+            # curve_groups_count
+            anm_br.write_uint32(len(anm.bones))
+
+            # curves_count
+            anm_br.write_uint32(sum(map(lambda x: len(x.curves), anm.bones.values())))
+
+            # graphs_index and graphs_count
+            anm_br.write_uint32(graphs_index_count[i])
+
+            # animation_data_size and animation_data_offset
+            anm_br.write_uint32(anm_data_size_offset[i])
+
+            # graph_data_size and graph_data_size
+            anm_br.write_uint32(graph_data_size_offset[i])
+
+            # Padding
+            anm_br.write_uint32(0)
+
+        # Calculate the section start offsets
+        curves_start = anm_data_start + anm_data_br.size()
+        curve_groups_start = curves_start + curve_br.size()
+        bone_groups_start = curve_groups_start + curve_groups_br.size()
+        strings_start = bone_groups_start + bone_groups_br.size()
+        graphs_data_start = strings_start + strings_br.size()
+        graphs_offsets_start = graphs_data_start + graphs_data_br.size()
+        anm_start = graphs_offsets_start + graphs_offsets_br.size()
+
+        file_size = anm_start + anm_br.size()
+
+        # Header
+        br.write_str('GSGT')
+
+        # Use big endian by default (because it is guaranteed to be supported by all versions)
+        br.write_uint8(2)
+        br.write_uint8(1)
+
+        # Padding
+        br.write_uint16(0)
+
+        br.write_uint32(gmt.version)
+
+        # File size without padding
+        br.write_uint32(file_size)
+
+        br.write_struct(BrRGGString(gmt.name))
+
+        br.write_uint32(len(gmt.animation_list))
+        br.write_uint32(anm_start)
+        br.write_uint32(len(graphs))
+        br.write_uint32(graphs_offsets_start)
+        br.write_uint32(graphs_data_br.size())
+        br.write_uint32(graphs_data_start)
+        br.write_uint32(len(strings))
+        br.write_uint32(strings_start)
+        br.write_uint32(len(bone_groups))
+        br.write_uint32(bone_groups_start)
+        br.write_uint32(len(curve_groups))
+        br.write_uint32(curve_groups_start)
+        br.write_uint32(curves_index)
+        br.write_uint32(curves_start)
+        br.write_uint32(anm_data_br.size())
+        br.write_uint32(anm_data_start)
+
+        # Padding
+        br.pad(0xC)
+
+        # Flags
+        br.write_uint32(0)
+
+        # Merge all of the buffers
+        br.extend(anm_data_br.buffer())
+        br.extend(curve_br.buffer())
+        br.extend(curve_groups_br.buffer())
+        br.extend(bone_groups_br.buffer())
+        br.extend(strings_br.buffer())
+        br.extend(graphs_data_br.buffer())
+        br.extend(graphs_offsets_br.buffer())
+        br.extend(anm_br.buffer())
+
+        br.seek(0, Whence.END)
+
+        # Align
+        br.align(0x1000)
 
 
 class BrGMTHeader(BrStruct):
@@ -45,7 +238,7 @@ class BrGMTHeader(BrStruct):
         if self.magic != 'GSGT':
             raise Exception(f'Invalid magic: Expected GSGT, got {self.magic}')
 
-        br.read_uint8()  # 0x02 for little, 0x21 for big endian
+        br.read_uint8()  # 0x02 for big, 0x21 for little endian
         self.endianness = br.read_uint8() == 1
 
         br.set_endian(self.endianness)
@@ -105,10 +298,24 @@ class BrGMTAnimation(BrStruct):
 
 
 class BrGMTGraph(BrStruct):
+    def __init__(self, values=None):
+        self.values = list() if values is None else values
+
     def __br_read__(self, br: BinaryReader):
         self.count = br.read_uint16()
         self.values = br.read_uint16(self.count)
         br.read_int16()  # Delimiter (0xFFFF)
+
+    def __br_write__(self, br: BinaryReader):
+        br.write_uint16(len(self.values))
+        br.write_uint16(self.values)
+        br.write_int16(-1)
+
+    def __hash__(self) -> int:
+        return len(self.values) ^ sum(map(hash, self.values))
+
+    def __eq__(self, o: object) -> bool:
+        return isinstance(o, BrGMTGraph) and len(o.values) == len(self.values) and all(map(lambda x, y: x == y, o.values, self.values))
 
 
 class BrGMTGroup(BrStruct):
@@ -128,92 +335,6 @@ class BrGMTGroup(BrStruct):
         br.write_uint16(self.count)
 
 
-# LOC_XYZ
-def _read_loc_all(br: BinaryReader, count):
-    return list(map(lambda _: br.read_float(3), range(count)))
-
-
-# LOC_CHANNEL
-def _read_loc_channel(br: BinaryReader, count):
-    return list(map(lambda _: br.read_float(1), range(count)))
-
-
-# ROT_QUAT_XYZ_FLOAT
-def _read_quat_xyz_float(br: BinaryReader, count):
-    values = [None] * count
-
-    for i in range(count):
-        xyz = br.read_float(3)
-        w = 1.0 - sum(map(lambda a: a ** 2, xyz))
-        values[i] = (*xyz, (sqrt(w) if w > 0 else 0))
-
-    return values
-
-
-# ROT_XYZW_SHORT (KENZAN)
-def _read_quat_half_float(br: BinaryReader, count):
-    return list(map(lambda _: br.read_half_float(4), range(count)))
-
-
-# ROT_XYZW_SHORT
-def _read_quat_scaled(br: BinaryReader, count):
-    return list(map(lambda _: tuple([(x / 16_384) for x in br.read_int16(4)]), range(count)))
-
-
-# ROT_XW_FLOAT
-def _read_quat_channel_float(br: BinaryReader, count):
-    return list(map(lambda _: br.read_float(2), range(count)))
-
-
-# ROT_XW_SHORT (KENZAN)
-def _read_quat_channel_half_float(br: BinaryReader, count):
-    return list(map(lambda _: br.read_half_float(2), range(count)))
-
-
-# ROT_XW_SHORT
-def _read_quat_channel_scaled(br: BinaryReader, count):
-    return list(map(lambda _: tuple([(x / 16_384) for x in br.read_int16(2)]), range(count)))
-
-
-# ROT_QUAT_XYZ_INT
-def _read_quat_xyz_int(br: BinaryReader, count):
-    base_quaternion = [(x / 32_768) for x in br.read_int16(4)]
-    scale_quaternion = [(x / 32_768) for x in br.read_uint16(4)]
-
-    values = [None] * count
-
-    for i in range(count):
-        f = br.read_uint32()
-        axis_index = f & 3
-        f = f >> 2
-
-        indices = [0, 1, 2, 3]
-        indices.pop(axis_index)
-
-        v123 = (0x3FF00000, 0x000FFC00, 0x000003FF)
-        m123 = struct.unpack(">fff", b'\x30\x80\x00\x00\x35\x80\x00\x00\x3A\x80\x00\x00')
-
-        # A lengthy calculation taken straight out of decompiled code
-        a123 = list(map(lambda v, m, l: (float(f & v) * m *
-                                         scale_quaternion[l]) + base_quaternion[l], v123, m123, indices))
-        a4 = 1.0 - sum(map(lambda a: a ** 2, a123))
-
-        a123.insert(axis_index, sqrt(a4) if a4 > 0 else 0)
-        values[i] = tuple(a123)
-
-    return values
-
-
-# PATTERN_HAND
-def _read_pattern_short(br: BinaryReader, count):
-    return list(map(lambda _: br.read_int16(2), range(count)))
-
-
-# PATTERN_UNK
-def _read_bytes(br: BinaryReader, count):
-    return list(map(lambda _: br.read_uint8(1), range(count)))
-
-
 class BrGMTCurve(BrStruct):
     def __br_read__(self, br: BinaryReader, graphs, version):
         self.graph_index = br.read_uint32()
@@ -230,28 +351,78 @@ class BrGMTCurve(BrStruct):
         count = self.graph.count
         with br.seek_to(self.animation_data_offset):
             if self.format == GMTCurveFormat.ROT_QUAT_XYZ_FLOAT:
-                self.values = _read_quat_xyz_float(br, count)
+                self.values = read_quat_xyz_float(br, count)
             elif self.format == GMTCurveFormat.ROT_XYZW_SHORT:
                 if version > GMTVersion.KENZAN:
-                    self.values = _read_quat_scaled(br, count)
+                    self.values = read_quat_scaled(br, count)
                 else:
-                    self.values = _read_quat_half_float(br, count)
+                    self.values = read_quat_half_float(br, count)
             elif self.format == GMTCurveFormat.LOC_CHANNEL:
-                self.values = _read_loc_channel(br, count)
+                self.values = read_loc_channel(br, count)
             elif self.format == GMTCurveFormat.LOC_XYZ:
-                self.values = _read_loc_all(br, count)
+                self.values = read_loc_all(br, count)
             elif self.format in [GMTCurveFormat.ROT_XW_FLOAT, GMTCurveFormat.ROT_YW_FLOAT, GMTCurveFormat.ROT_ZW_FLOAT]:
-                self.values = _read_quat_channel_float(br, count)
+                self.values = read_quat_channel_float(br, count)
             elif self.format in [GMTCurveFormat.ROT_XW_SHORT, GMTCurveFormat.ROT_YW_SHORT, GMTCurveFormat.ROT_ZW_SHORT]:
                 if version > GMTVersion.KENZAN:
-                    self.values = _read_quat_channel_scaled(br, count)
+                    self.values = read_quat_channel_scaled(br, count)
                 else:
-                    self.values = _read_quat_channel_half_float(br, count)
+                    self.values = read_quat_channel_half_float(br, count)
             elif self.format == GMTCurveFormat.PATTERN_HAND:
-                self.values = _read_pattern_short(br, count)
+                self.values = read_pattern_short(br, count)
             elif self.format == GMTCurveFormat.PATTERN_UNK:
-                self.values = _read_bytes(br, count)
+                self.values = read_bytes(br, count)
             elif self.format == GMTCurveFormat.ROT_QUAT_XYZ_INT:
-                self.values = _read_quat_xyz_int(br, count)
+                self.values = read_quat_xyz_int(br, count)
             else:
-                self.values = _read_bytes(br, count)
+                self.values = read_bytes(br, count)
+
+    def __br_write__(self, br: BinaryReader, curve: GMTCurve, graphs_dict: IterativeDict, anm_data_br: BinaryReader, anm_data_start: int, version: GMTVersion):
+        frames, values = zip(*map(lambda x: (x.frame, x.value), curve.keyframes))
+
+        # graph_index
+        br.write_uint32(graphs_dict.get_or_next(BrGMTGraph(frames)))
+
+        # animation_data_offset
+        br.write_uint32(anm_data_start + anm_data_br.size())
+
+        # format
+        if curve.type == GMTCurveType.LOCATION:
+            if curve.channel == GMTCurveChannel.ALL:
+                br.write_uint32(GMTCurveFormat.LOC_XYZ)
+                write_loc_all(anm_data_br, values)
+            else:
+                br.write_uint32(GMTCurveFormat.LOC_CHANNEL)
+                write_loc_channel(anm_data_br, values)
+        elif curve.type == GMTCurveType.ROTATION:
+            if curve.channel == GMTCurveChannel.ALL:
+                br.write_uint32(GMTCurveFormat.ROT_XYZW_SHORT)
+                if version > GMTVersion.KENZAN:
+                    write_quat_scaled(anm_data_br, values)
+                else:
+                    write_quat_half_float(anm_data_br, values)
+            else:
+                if curve.channel == GMTCurveChannel.XW:
+                    br.write_uint32(GMTCurveFormat.ROT_XW_SHORT)
+                elif curve.channel == GMTCurveChannel.YW:
+                    br.write_uint32(GMTCurveFormat.ROT_YW_SHORT)
+                elif curve.channel == GMTCurveChannel.ZW:
+                    br.write_uint32(GMTCurveFormat.ROT_ZW_SHORT)
+                else:
+                    pass
+
+                if version > GMTVersion.KENZAN:
+                    write_quat_channel_scaled(anm_data_br, values)
+                else:
+                    write_quat_channel_half_float(anm_data_br, values)
+        elif curve.type == GMTCurveType.PATTERN_HAND:
+            br.write_uint32(GMTCurveFormat.PATTERN_HAND)
+            write_pattern_short(anm_data_br, values)
+        elif curve.type in [GMTCurveType.PATTERN_UNK, GMTCurveType.PATTERN_FACE]:
+            br.write_uint32(GMTCurveFormat.PATTERN_UNK)
+            write_bytes(anm_data_br, values)
+        else:
+            pass
+
+        # channel_type
+        br.write_uint32((curve.channel << 16) | curve.type)

@@ -51,6 +51,9 @@ class GMTAnimation:
         self.end_frame = end_frame
         self.bones = dict()
 
+    def get_start_frame(self):
+        return max(0, min(*map(lambda c: c.get_start_frame(), chain(*map(lambda x: x.curves, self.bones.values())))))
+
     def get_end_frame(self):
         return max(0, *map(lambda c: c.get_end_frame(), chain(*map(lambda x: x.curves, self.bones.values()))))
 
@@ -73,12 +76,26 @@ class GMTBone:
     @property
     def curves(self) -> List['GMTCurve']:
         """Returns a copied list containing the curves for this bone. Modifying this does not modify the internal curves dict."""
-        return list(self.__curve_dict.values())
+        result = list()
+
+        for value in self.__curve_dict.values():
+            # For pattern curves
+            if hasattr(value, '__iter__'):
+                result.extend(value)
+            else:
+                result.append(value)
+
+        return result
 
     @curves.setter
     def curves(self, val: List['GMTCurve']):
         """Creates the curves dict from a list. The list is not preserved/used after this."""
         self.__curve_dict = dict(map(lambda x: (x.type, x), val))
+
+        # Properly add all pattern curves
+        for pat in [GMTCurveType.PATTERN_HAND, GMTCurveType.PATTERN_UNK, GMTCurveType.PATTERN_FACE]:
+            if pat in self.__curve_dict:
+                self.__curve_dict[pat] = [x for x in val if x.type == pat]
 
     # Location curve
     @property
@@ -116,6 +133,15 @@ class GMTBone:
     def patterns_face(self, val: List['GMTCurve']):
         self.__curve_dict[GMTCurveType.PATTERN_FACE] = val
 
+    # Unknown patterns
+    @property
+    def patterns_unk(self) -> List['GMTCurve']:
+        return self.__curve_dict.get(GMTCurveType.PATTERN_UNK)
+
+    @patterns_unk.setter
+    def patterns_unk(self, val: List['GMTCurve']):
+        self.__curve_dict[GMTCurveType.PATTERN_UNK] = val
+
     # @property
     # def other_curves(self) -> List['GMTCurve']:
     #     return [self.__curve_dict[c] for c in self.__curve_dict if c not in list(GMTCurveType)]
@@ -131,6 +157,8 @@ class GMTCurve:
         self.channel = channel
         self.keyframes = list()
 
+    def get_start_frame(self):
+        return self.keyframes[0].frame if len(self.keyframes) else 0
 
     def get_end_frame(self):
         return self.keyframes[-1].frame if len(self.keyframes) else 0
