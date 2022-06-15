@@ -72,6 +72,7 @@ class GMTBone:
 
     def __init__(self, name):
         self.name = name
+        self.__curve_dict = dict()
 
     # Curves
     @property
