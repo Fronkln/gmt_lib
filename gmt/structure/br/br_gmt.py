@@ -128,7 +128,7 @@ class BrGMT(BrStruct):
             anm_br.write_uint32(anm.get_start_frame())
 
             # end_frame
-            anm_br.write_uint32(anm.end_frame)
+            anm_br.write_uint32(anm.get_end_frame())
 
             # index
             anm_br.write_uint32(i)
