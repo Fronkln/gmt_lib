@@ -20,7 +20,10 @@ class GMT:
 
     @animation.setter
     def animation(self, val):
-        self.animation_list[0] = val
+        if len(self.animation_list):
+            self.animation_list[0] = val
+        else:
+            self.animation_list.append(val)
 
     @property
     def vector_version(self) -> GMTVectorVersion:
