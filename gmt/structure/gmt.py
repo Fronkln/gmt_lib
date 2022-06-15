@@ -28,7 +28,8 @@ class GMT:
 
         # Detect old version by the scale bone
         if vector_version != GMTVectorVersion.NO_VECTOR and len(self.animation_list) != 0:
-            vector_version = GMTVectorVersion.OLD_VECTOR if self.animation_list[0].bones.get('scale') else GMTVectorVersion.DRAGON_VECTOR
+            vector_version = GMTVectorVersion.OLD_VECTOR if self.animation_list[0].bones.get(
+                'scale') else GMTVectorVersion.DRAGON_VECTOR
 
         return vector_version
 
@@ -163,7 +164,6 @@ class GMTCurve:
     def get_end_frame(self):
         return self.keyframes[-1].frame if len(self.keyframes) else 0
 
-
     def fill_channels(self):
         if self.channel != GMTCurveChannel.ALL:
             if self.type == GMTCurveType.LOCATION:
@@ -194,6 +194,18 @@ class GMTCurve:
                     raise Exception(f'Incompatible channel value: {self.channel}')
 
                 self.channel = GMTCurveChannel.ALL
+
+    @classmethod
+    def new_location_curve(cls) -> 'GMTCurve':
+        curve = cls(GMTCurveType.LOCATION)
+        curve.keyframes.append(GMTKeyframe(0, (0.0, 0.0, 0.0)))
+        return curve
+
+    @classmethod
+    def new_rotation_curve(cls) -> 'GMTCurve':
+        curve = cls(GMTCurveType.ROTATION)
+        curve.keyframes.append(GMTKeyframe(0, (0.0, 0.0, 0.0, 1.0)))
+        return curve
 
 
 class GMTKeyframe:
