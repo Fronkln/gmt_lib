@@ -135,3 +135,4 @@ def read_bytes(br: BinaryReader, count):
 
 def write_bytes(br: BinaryReader, values: List[Tuple[float]]):
     br.write_int8(list(chain(*values)))
+    br.align(4)
