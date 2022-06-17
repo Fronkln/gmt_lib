@@ -130,7 +130,7 @@ def write_pattern_short(br: BinaryReader, values: List[Tuple[float]]):
 
 # PATTERN_UNK
 def read_bytes(br: BinaryReader, count):
-    return list(map(lambda _: br.read_uint8(1), range(count)))
+    return list(map(lambda _: br.read_int8(1), range(count)))
 
 
 def write_bytes(br: BinaryReader, values: List[Tuple[float]]):
