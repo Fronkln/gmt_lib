@@ -7,7 +7,7 @@ from .br_rgg import BrRGGString
 
 class BrGMT(BrStruct):
     def __br_read__(self, br: BinaryReader):
-        self.header = br.read_struct(BrGMTHeader)
+        self.header: BrGMTHeader = br.read_struct(BrGMTHeader)
         header: BrGMTHeader = self.header
 
         br.seek(header.animations_offset)
@@ -251,7 +251,7 @@ class BrGMTHeader(BrStruct):
         # File size without padding
         self.data_size = br.read_uint32()
 
-        self.file_name = br.read_struct(BrRGGString)
+        self.file_name: BrRGGString = br.read_struct(BrRGGString)
 
         self.animations_count = br.read_uint32()
         self.animations_offset = br.read_uint32()
