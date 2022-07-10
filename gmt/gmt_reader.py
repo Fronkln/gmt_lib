@@ -1,12 +1,14 @@
 from typing import Union
 
 from .structure.br.br_gmt import *
+from .structure.br.br_ifa import *
 from .structure.gmt import *
+from .structure.ifa import *
 from .util import *
 
 
 def read_gmt(file: Union[str, bytearray]) -> GMT:
-    """Reads a GMT file and returns an GMT object.
+    """Reads a GMT file and returns a GMT object.
     :param file: Path to file as a string, or bytes-like object containing the file
     :return: The GMT object
     """
@@ -49,3 +51,21 @@ def read_gmt(file: Union[str, bytearray]) -> GMT:
         gmt.animation_list.append(anm)
 
     return gmt
+
+
+def read_ifa(file: Union[str, bytearray]) -> IFA:
+    """Reads an IFA file and returns an IFA object.
+    :param file: Path to file as a string, or bytes-like object containing the file
+    :return: The IFA object
+    """
+
+    if isinstance(file, str):
+        with open(file, 'rb') as f:
+            file_bytes = f.read()
+    else:
+        file_bytes = file
+
+    with BinaryReader(file_bytes) as br:
+        br_ifa: BrIFA = br.read_struct(BrIFA)
+
+    return IFA(list(map(lambda x: IFABone(x.name.data, x.parent_name.data, x.location, x.rotation), br_ifa.bones)))
