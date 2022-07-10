@@ -1,4 +1,4 @@
-from enum import IntFlag, auto
+from enum import Enum, IntFlag
 
 
 class GMTVersion(IntFlag):
@@ -8,10 +8,10 @@ class GMTVersion(IntFlag):
     ISHIN = 0x20002
 
 
-class GMTVectorVersion:
-    NO_VECTOR = auto()
-    OLD_VECTOR = auto()
-    DRAGON_VECTOR = auto()
+class GMTVectorVersion(Enum):
+    NO_VECTOR = 0
+    OLD_VECTOR = 1
+    DRAGON_VECTOR = 2
 
     @classmethod
     def from_GMTVersion(cls, version: GMTVersion):
