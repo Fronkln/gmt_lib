@@ -213,7 +213,10 @@ class BrGMT(BrStruct):
         br.pad(0xC)
 
         # Flags
-        br.write_uint32(0)
+        if gmt.is_face_gmt:
+            br.write_uint32(0x07_21_03_01)
+        else:
+            br.write_uint32(0)
 
         # Merge all of the buffers
         br.extend(anm_data_br.buffer())

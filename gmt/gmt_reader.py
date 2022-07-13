@@ -23,6 +23,7 @@ def read_gmt(file: Union[str, bytearray]) -> GMT:
         br_gmt: BrGMT = br.read_struct(BrGMT)
 
     gmt = GMT(br_gmt.header.file_name.data, br_gmt.header.version)
+    gmt.is_face_gmt = br_gmt.header.flags[0:2] == (0x7, 0x21)
 
     # Get bone names from groups
     bone_names: List[List[str]] = list(

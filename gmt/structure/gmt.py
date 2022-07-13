@@ -7,11 +7,13 @@ from .enums.gmt_enum import *
 class GMT:
     name: str
     version: GMTVersion
+    is_face_gmt: bool
     animation_list: List['GMTAnimation']
 
     def __init__(self, name, version):
         self.name = name
         self.version = version
+        self.is_face_gmt = False
         self.animation_list = list()
 
     @property
@@ -60,6 +62,14 @@ class GMTAnimation:
 
     def get_end_frame(self):
         return max(0, *map(lambda c: c.get_end_frame(), chain(*map(lambda x: x.curves, self.bones.values()))))
+
+    def is_face_anm(self):
+        """This is not a very concrete method, but animations with names in this format \"f{num}_param{x}__{xy}\"
+        (and are inside a face gmt) are NOT face anms.
+        Note that the animation should never be considered as a face animation unless GMT.is_face_gmt is True.
+        """
+
+        return '_param' not in self.name and '_non' not in self.name
 
     def __str__(self) -> str:
         return f'name: {self.name}, len(bones): {len(self.bones)}'
