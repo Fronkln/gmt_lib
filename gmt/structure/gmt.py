@@ -56,7 +56,7 @@ class GMTAnimation:
         self.bones = dict()
 
     def get_start_frame(self):
-        return max(0, min(*map(lambda c: c.get_start_frame(), chain(*map(lambda x: x.curves, self.bones.values())))))
+        return max(0, min(0xFF_FF_FF_FF, *map(lambda c: c.get_start_frame(), chain(*map(lambda x: x.curves, self.bones.values())))))
 
     def get_end_frame(self):
         return max(0, *map(lambda c: c.get_end_frame(), chain(*map(lambda x: x.curves, self.bones.values()))))
