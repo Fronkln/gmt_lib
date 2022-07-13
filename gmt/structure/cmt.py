@@ -53,11 +53,12 @@ class CMTFrame:
         self.clip_range = None
 
     def from_dist_rotation(self, distance: float, rotation: Quaternion):
-        forward: Vector = rotation @ Vector((0.0, 1.0, 0.0))
+        # I am not 100% sure of the logic behind this, but this combination seems to work fine (vector and euler conversion)
+        forward: Vector = rotation @ Vector((0.0, 0.0, 1.0))
         forward.length = distance
 
         self.focus_point = self.location + forward
-        self.roll = 2 * atan(rotation.y / rotation.w)
+        self.roll = rotation.to_euler('XZY').z
 
     def to_dist_rotation(self) -> Tuple[float, Quaternion]:
         forward: Vector = self.focus_point - self.location
