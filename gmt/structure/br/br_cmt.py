@@ -23,7 +23,8 @@ class BrCMT(BrStruct):
         br.write_str_fixed('CMTP', 4)
 
         br.write_int8(-1)
-        br.write_uint8(1)  # Endianness (big)
+        br.write_uint8(1)   # Endianness (big)
+        br.write_uint16(0)  # Padding
 
         br.write_uint32(cmt.version.value)
 
@@ -101,13 +102,16 @@ class BrCMTAnimation(BrStruct):
 
         if version == CMTVersion.KENZAN:
             self.anm_data_format = CMTFormat.ROT_FLOAT
-            br.write_struct(BrCMTFrameRotFloat, anm.frames)
+            br_cmt_frame_cls = BrCMTFrameRotFloat
         elif version == CMTVersion.YAKUZA3:
             self.anm_data_format = CMTFormat.DIST_ROT_SHORT
-            br.write_struct(BrCMTFrameDistRotShort, anm.frames)
+            br_cmt_frame_cls = BrCMTFrameDistRotShort
         else:
             self.anm_data_format = CMTFormat.FOC_ROLL
-            br.write_struct(BrCMTFrameFocRoll, anm.frames)
+            br_cmt_frame_cls = BrCMTFrameFocRoll
+
+        for frame in anm.frames:
+            br.write_struct(br_cmt_frame_cls(), frame)
 
         if anm.has_clip_range():
             self.anm_data_format |= CMTFormat.CLIP_RANGE
