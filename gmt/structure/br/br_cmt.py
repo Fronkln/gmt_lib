@@ -86,6 +86,8 @@ class BrCMTAnimation(BrStruct):
             br_frame_struct = BrCMTFrameRotFloat
         elif target_format == CMTFormat.DIST_ROT_SHORT:
             br_frame_struct = BrCMTFrameDistRotShort
+        elif target_format == CMTFormat.DIST_ROT_XYZ:
+            br_frame_struct = BrCMTFrameDistRotXYZ
         elif target_format == CMTFormat.FOC_ROLL:
             br_frame_struct = BrCMTFrameFocRoll
         else:
@@ -106,6 +108,9 @@ class BrCMTAnimation(BrStruct):
         elif version == CMTVersion.YAKUZA3:
             self.anm_data_format = CMTFormat.DIST_ROT_SHORT
             br_cmt_frame_cls = BrCMTFrameDistRotShort
+        elif version == CMTVersion.YAKUZA4:
+            self.anm_data_format = CMTFormat.DIST_ROT_XYZ
+            br_cmt_frame_cls = BrCMTFrameDistRotXYZ
         else:
             self.anm_data_format = CMTFormat.FOC_ROLL
             br_cmt_frame_cls = BrCMTFrameFocRoll
@@ -157,6 +162,21 @@ class BrCMTFrameDistRotShort(BrCMTFrame):
         br.write_float(dist)
         br.pad(4)  # Padding
         write_quat_scaled(br, [rotation[1:] + (rotation[0],)])
+
+
+class BrCMTFrameDistRotXYZ(BrCMTFrame):
+    def __br_read__(self, br: BinaryReader):
+        super().__br_read__(br)
+
+        self.distance = br.read_float()
+        self.rotation = read_quat_xyz_float(br, 1)[0]
+
+    def __br_write__(self, br: 'BinaryReader', frame: CMTFrame):
+        super().__br_write__(br, frame)
+
+        dist, rotation = frame.to_dist_rotation()
+        br.write_float(dist)
+        br.write_float(rotation[1:4])
 
 
 class BrCMTFrameFocRoll(BrCMTFrame):

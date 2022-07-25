@@ -86,6 +86,9 @@ def read_cmt(file: Union[str, bytearray]) -> CMT:
             elif isinstance(br_anm.frames[0], BrCMTFrameDistRotShort):
                 list(map(lambda x, y: x.from_dist_rotation(y.distance, Quaternion(
                     (y.rotation[3],) + y.rotation[:3])), anm.frames, br_anm.frames))
+            elif isinstance(br_anm.frames[0], BrCMTFrameDistRotXYZ):
+                list(map(lambda x, y: x.from_dist_rotation(y.distance, Quaternion(
+                    (y.rotation[3],) + y.rotation[:3])), anm.frames, br_anm.frames))
             elif isinstance(br_anm.frames[0], BrCMTFrameFocRoll):
                 for frame, br_frame in zip(anm.frames, br_anm.frames):
                     frame.focus_point = Vector(br_frame.focus_point)
