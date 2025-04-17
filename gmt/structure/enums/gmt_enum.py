@@ -46,6 +46,7 @@ class GMTCurveChannel(IntFlag):
     Y = YW = UNK_HAND = 2
     ZW = 3
     Z = 4
+    FACE = 2
 
 
 class GMTCurveFormat(IntFlag):

@@ -64,6 +64,8 @@ class BrGMT(BrStruct):
             graphs_dict: IterativeDict = IterativeDict()
 
             for bone in anm.bones.values():
+                print("Writing bone " + bone.name)
+                
                 # Add the curve group (index, count)
                 curve_groups.append(BrGMTGroup(curves_index, len(bone.curves)))
                 curves_index += len(bone.curves)
@@ -185,7 +187,7 @@ class BrGMT(BrStruct):
         # Padding
         br.write_uint16(0)
 
-        br.write_uint32(gmt.version)
+        br.write_uint32(int(gmt.version))
 
         # File size without padding
         br.write_uint32(file_size)
@@ -380,6 +382,7 @@ class BrGMTCurve(BrStruct):
             else:
                 self.values = read_bytes(br, count)
 
+    #Known as Animation Segment in the template
     def __br_write__(self, br: BinaryReader, curve: GMTCurve, graphs_dict: IterativeDict, anm_data_br: BinaryReader, anm_data_start: int, version: GMTVersion):
         frames, values = zip(*map(lambda x: (x.frame, x.value), curve.keyframes))
 
@@ -392,25 +395,25 @@ class BrGMTCurve(BrStruct):
         # format
         if curve.type == GMTCurveType.LOCATION:
             if curve.channel == GMTCurveChannel.ALL:
-                br.write_uint32(GMTCurveFormat.LOC_XYZ)
+                br.write_uint32(int(GMTCurveFormat.LOC_XYZ))
                 write_loc_all(anm_data_br, values)
             else:
-                br.write_uint32(GMTCurveFormat.LOC_CHANNEL)
+                br.write_uint32(int(GMTCurveFormat.LOC_CHANNEL))
                 write_loc_channel(anm_data_br, values)
         elif curve.type == GMTCurveType.ROTATION:
             if curve.channel == GMTCurveChannel.ALL:
-                br.write_uint32(GMTCurveFormat.ROT_XYZW_SHORT)
+                br.write_uint32(int(GMTCurveFormat.ROT_XYZW_SHORT))
                 if version > GMTVersion.KENZAN:
                     write_quat_scaled(anm_data_br, values)
                 else:
                     write_quat_half_float(anm_data_br, values)
             else:
                 if curve.channel == GMTCurveChannel.XW:
-                    br.write_uint32(GMTCurveFormat.ROT_XW_SHORT)
+                    br.write_uint32(int(GMTCurveFormat.ROT_XW_SHORT))
                 elif curve.channel == GMTCurveChannel.YW:
-                    br.write_uint32(GMTCurveFormat.ROT_YW_SHORT)
+                    br.write_uint32(int(GMTCurveFormat.ROT_YW_SHORT))
                 elif curve.channel == GMTCurveChannel.ZW:
-                    br.write_uint32(GMTCurveFormat.ROT_ZW_SHORT)
+                    br.write_uint32(int(GMTCurveFormat.ROT_ZW_SHORT))
                 else:
                     pass
 
@@ -419,13 +422,15 @@ class BrGMTCurve(BrStruct):
                 else:
                     write_quat_channel_half_float(anm_data_br, values)
         elif curve.type == GMTCurveType.PATTERN_HAND:
-            br.write_uint32(GMTCurveFormat.PATTERN_HAND)
+            br.write_uint32(int(GMTCurveFormat.PATTERN_HAND))
             write_pattern_short(anm_data_br, values)
         elif curve.type in [GMTCurveType.PATTERN_UNK, GMTCurveType.PATTERN_FACE]:
-            br.write_uint32(GMTCurveFormat.PATTERN_UNK)
+            br.write_uint32(int(GMTCurveFormat.PATTERN_UNK))
             write_bytes(anm_data_br, values)
         else:
             pass
 
+        value = (curve.channel << 16) | int(curve.type)
+        value = int(value)
         # channel_type
-        br.write_uint32((curve.channel << 16) | curve.type)
+        br.write_uint32(value)
