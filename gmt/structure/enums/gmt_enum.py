@@ -72,7 +72,7 @@ class GMTCurveFormat(IntFlag):
 
     ROT_QUAT_XYZ_INT = 0x1E
 
-    #Face targets that we have identified exists between both OE and DE games
+
 class OEDEFaceTarget(IntFlag):
     a_l = 0
     a_r = 1
