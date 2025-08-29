@@ -6,6 +6,7 @@ class GMTVersion(IntFlag):
     YAKUZA3 = 0x20000
     YAKUZA5 = 0x20001
     ISHIN = 0x20002
+    DE2 = 0x20003    
 
 
 class GMTVectorVersion(Enum):
@@ -15,7 +16,7 @@ class GMTVectorVersion(Enum):
 
     @classmethod
     def from_GMTVersion(cls, version: GMTVersion):
-        if version == GMTVersion.ISHIN:
+        if version >= GMTVersion.ISHIN:
             # This can be OLD_VECTOR as well, but that can't be determined with the version alone
             return GMTVectorVersion.DRAGON_VECTOR
 

@@ -23,10 +23,10 @@ class BrGMT(BrStruct):
         self.strings = br.read_struct(BrRGGString, header.strings_count)
 
         br.seek(header.bone_groups_offset)
-        self.bone_groups = br.read_struct(BrGMTGroup, header.bone_groups_count)
+        self.bone_groups = br.read_struct(BrGMTGroup, header.bone_groups_count, None)
 
         br.seek(header.curve_groups_offset)
-        self.curve_groups = br.read_struct(BrGMTGroup, header.curve_groups_count)
+        self.curve_groups = br.read_struct(BrGMTGroup, header.curve_groups_count, header.version)
 
         br.seek(header.curves_offset)
         self.curves = br.read_struct(BrGMTCurve, header.curves_count, self.graphs, header.version)
@@ -84,6 +84,10 @@ class BrGMT(BrStruct):
         # Curve groups
         curve_groups_br = BinaryReader(endianness=Endian.BIG)
         for g in curve_groups:
+
+            if(gmt.version > GMTVersion.ISHIN):
+                g.count = int(g.count * 1024)
+
             curve_groups_br.write_struct(g)
 
         curve_groups_br.align(0x20)
@@ -331,9 +335,13 @@ class BrGMTGroup(BrStruct):
         self.index = index
         self.count = count
 
-    def __br_read__(self, br: BinaryReader):
+    def __br_read__(self, br: BinaryReader, version):
         self.index = br.read_uint16()
         self.count = br.read_uint16()
+
+        # Version only relevant for GMT Bone Curve maps since Gaiden
+        if(version != None and version > GMTVersion.ISHIN):
+            self.count = int(self.count / 1024)
 
     def __br_write__(self, br: BinaryReader):
         br.write_uint16(self.index)
